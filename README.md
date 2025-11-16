@@ -28,7 +28,7 @@ No Java installation required! The standalone version includes everything you ne
 
 ### For the Standalone Version
 - **loot-editor-loader mod** (NeoForge mod for Minecraft 1.21.1) - **Recommended**
-  - Download from [loot-editor-loader releases](https://github.com/BadgerSnacks/loot-editor-loader)
+  - Download from [loot-editor-loader releases](https://legacy.curseforge.com/minecraft/mc-mods/loot-editor-loader) (waiting for the project to be accepted.)
   - Place in your modpack's `mods/` folder
 - **OR KubeJS mod** (experimental, untested alternative)
   - Only if you prefer KubeJS over the dedicated loader mod
