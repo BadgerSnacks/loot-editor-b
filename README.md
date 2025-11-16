@@ -1,29 +1,91 @@
 # Loot Editor B
 
-Loot Editor B is a desktop utility (Java 17 + JavaFX) that understands an entire Minecraft modpack: it scans vanilla loot, datapacks, KubeJS exports, and every mod jar, then makes the results editable through a point‑and‑click UI. You do **not** need modding experience—if you can point the app at your CurseForge instance, you can inspect and tweak loot tables.
+Loot Editor B is a desktop utility (Java 17 + JavaFX) that understands an entire Minecraft modpack: it scans vanilla loot, datapacks, and every mod jar, then makes the results editable through a point-and-click UI. You do **not** need modding experience—if you can point the app at your CurseForge instance, you can inspect and tweak loot tables.
+
+Works with **Minecraft 1.21.1** and **NeoForge 21.1.x** via the companion **loot-editor-loader** mod.
+
+---
+
+## Download Standalone Version
+
+**Don't want to build from source?** Download the latest standalone release:
+
+- **[Download image.zip](../../releases)** (~42 MB, includes Java runtime)
+- Extract anywhere and run:
+  - **Windows:** Double-click `LootEditorB.vbs` (no console window)
+  - **Windows (alternative):** Run `bin/loot-editor-b.bat`
+  - **Mac/Linux:** Run `bin/loot-editor-b`
+
+No Java installation required! The standalone version includes everything you need.
+
+---
+
+## Prerequisites
+
+### For the Standalone Version
+- **loot-editor-loader mod** (NeoForge mod for Minecraft 1.21.1)
+  - Download from [loot-editor-loader releases](https://github.com/BadgerSnacks/loot-editor-loader)
+  - Place in your modpack's `mods/` folder
+
+### For Building from Source
+- [JDK 17+](https://adoptium.net/)
+- [Gradle 8.5+](https://gradle.org/) (or use the included wrapper)
+- **loot-editor-loader mod** (same as above)
 
 ---
 
 ## Quick Start (for newcomers)
 
-1. **Install prerequisites**
-   - [JDK 17+](https://adoptium.net/)
-   - [Gradle 8.5+](https://gradle.org/) (or use the included wrapper)
-2. **Launch the app**
-   ```powershell
-   cd C:\Users\<you>\curseforge\minecraft\Instances\DBB2 Dev\loot-editor-b
-   .\gradlew.bat run
-   ```
-3. **Open your modpack.** Click **Open Modpack** > pick the CurseForge instance folder (the one that contains `mods/`, `kubejs/`, etc.). The app records the five most recent packs so you can reopen them from the split button next time.
-4. **In-game prep (one-time per pack).** Open a disposable world in Minecraft and run:
-   ```
-   /ct dump loottables
-   /ct dump enchantments
-   ```
-   CraftTweaker writes the dump files that Loot Editor uses for manifest comparisons and the enchantment palette.
-5. **Let the scan finish.** The status bar will read `Loot tables: ### | Items: ###` once both the loot tree and icon catalog are ready. Icons may appear grey for a second while textures load; they refresh automatically when the catalog completes.
+### 1. Install the loot-editor-loader mod
+The **loot-editor-loader** mod is a NeoForge mod that automatically loads loot table datapacks from the application. Without this mod, your edits won't appear in-game.
 
-That’s it—you can now browse loot tables, edit them, attach enchantment pools, and save changes back into `kubejs/data`.
+1. Download **loot-editor-loader** for Minecraft 1.21.1 / NeoForge 21.1.x
+2. Place the `.jar` file in your modpack's `mods/` folder
+3. The mod will automatically register the `loot_editor` datapack location
+
+### 2. Launch the app
+
+**Standalone version:**
+- Extract `image.zip` and run `LootEditorB.vbs` (Windows) or `bin/loot-editor-b` (Mac/Linux)
+
+**Building from source:**
+```powershell
+cd loot-editor-b
+.\gradlew.bat run
+```
+
+### 3. Open your modpack
+Click **Open Modpack** > pick the CurseForge instance folder (the one that contains `mods/`, `saves/`, etc.). The app records the five most recent packs so you can reopen them from the split button next time.
+
+### 4. In-game prep (one-time per pack)
+Open a disposable world in Minecraft and run:
+```
+/ct dump loottables
+/ct dump enchantments
+```
+CraftTweaker writes the dump files that Loot Editor uses for manifest comparisons and the enchantment palette.
+
+### 5. Let the scan finish
+The status bar will read `Loot tables: ### | Items: ###` once both the loot tree and icon catalog are ready. Icons may appear grey for a second while textures load; they refresh automatically when the catalog completes.
+
+That's it—you can now browse loot tables, edit them, attach enchantment pools, and save changes into the `datapacks/loot_editor/` folder.
+
+---
+
+## How the loot-editor-loader Mod Works
+
+The **loot-editor-loader** mod uses NeoForge's datapack system to automatically load loot tables from:
+- `<modpack>/datapacks/loot_editor/` (main export location)
+- `<world>/datapacks/loot_editor/` (world-specific overrides)
+- Custom paths defined in `loot-editor-loader-config.toml`
+
+**Key features:**
+- Automatically registers the `loot_editor` datapack on game startup
+- Supports live reloading with `/reload` command
+- Works with vanilla and modded loot tables
+- Compatible with Minecraft 1.21.1's new singular folder naming (`loot_table/` instead of `loot_tables/`)
+
+**Config location:** `<modpack>/config/loot-editor-loader-config.toml`
 
 ---
 
@@ -31,8 +93,8 @@ That’s it—you can now browse loot tables, edit them, attach enchantment pool
 
 ### 1. Browse and open loot tables
 - Use the left-hand tree to filter by **All / Chests / Blocks / Entities**.
-- Double-click any leaf node (e.g., `kubejs/minecraft/chests/ancient_city`) to load it into the editor pane.
-- The **Inspector** tab shows the path on disk plus whether the table is editable. If it lives inside a mod jar, hit **Fork to KubeJS** to copy it into `kubejs/data` before editing.
+- Double-click any leaf node (e.g., `minecraft/chests/ancient_city`) to load it into the editor pane.
+- The **Inspector** tab shows the path on disk plus whether the table is editable. If it lives inside a mod jar, hit **Fork to Datapack** to copy it into `datapacks/loot_editor/` before editing.
 
 ### 2. Edit drops in the Loot Entries list
 - There is a single list labeled **Loot Entries**. Each row displays the item icon, friendly name, weight, and min/max count.
@@ -41,53 +103,60 @@ That’s it—you can now browse loot tables, edit them, attach enchantment pool
   - The palette uses the same icons as JEI; if you add a new resource pack or mod, click **Rescan** so Loot Editor rebuilds the catalog.
 - **Adjust weights and counts**
   - Use the spinners in each row. Changes are live-updated in the JSON preview at the bottom.
-  - The row gains a “New” or “Edited” badge until you save.
+  - The row gains a "New" or "Edited" badge until you save.
 
 ### 3. Work with Enchantment Pools
-- Switch to the **Enchant Pools** tab to create reusable pools (e.g., “Rare Sword Enchants”).
-- **Hide noise:** The “Show empty pools” toggle filters out pools that currently have zero enchantments so the list stays concise.
-- **Add enchantments via palette:** The panel on the right lists every enchantment discovered in `ct_dumps/enchantment.txt`. **Double-click** an entry to add it to the pool table. You can filter by mod namespace (e.g., `minecraft`, `apotheosis`) or search by name (“Swift Sneak”).
+- Switch to the **Enchant Pools** tab to create reusable pools (e.g., "Rare Sword Enchants").
+- **Hide noise:** The "Show empty pools" toggle filters out pools that currently have zero enchantments so the list stays concise.
+- **Add enchantments via palette:** The panel on the right lists every enchantment discovered in `ct_dumps/enchantment.txt`. **Double-click** an entry to add it to the pool table. You can filter by mod namespace (e.g., `minecraft`, `apotheosis`) or search by name ("Swift Sneak").
 - **Attach a pool to an item:** Select a loot row, highlight the pool you want, then click **Attach To Selection**. The row now shows a badge such as `Rare Sword Enchants (loot_editor:rare_swords)` and, when saved, the app emits multiple loot entries with the correct `minecraft:set_enchantments` functions.
-- **Remove a pool:** Use the **Clear Pool** button inside the row or the “Clear Pool” button in the pool tab.
+- **Remove a pool:** Use the **Clear Pool** button inside the row or the "Clear Pool" button in the pool tab.
 - Switching between pools now warns you if the current form has unsaved edits, so save or discard before hopping to another pool. When a pool is dirty, a yellow banner appears with **Save Now** and **Discard Changes** buttons for quick control.
 
 ### 4. Save & test
-- Click **Save Loot Table**. The app writes JSON, stores metadata about pooled entries, and tells you if the file is read-only.
-- Saved overrides now land in `datapacks/loot_editor/...`. Each time you save/export, Loot Editor also mirrors that datapack into every world under `saves/<world>/datapacks/` so it is immediately enabled in-game (a datapack only loads when it sits in the world’s datapacks folder). The **Export Datapack** button writes the active modpack automatically; **Fork to KubeJS** stays available for legacy workflows.
+- Click **Save Loot Table**. The app writes JSON to `datapacks/loot_editor/data/<namespace>/loot_table/<path>.json`.
+- Each time you save/export, Loot Editor also mirrors that datapack into every world under `saves/<world>/datapacks/` so it is immediately enabled in-game (a datapack only loads when it sits in the world's datapacks folder).
 - Close the window only after saving. Loot Editor now warns if you try to exit while loot tables or enchantment pools still have unsaved edits.
-- Load your dev world and run `/reload` (or `/kubejs reload server_scripts`) to pull in the changes.
+- Load your dev world and run `/reload` to pull in the changes.
 - Use `/loot spawn <x> <y> <z> loot <table_id>` to test exactly what was edited. Example:
   ```
-  /loot spawn 0 100 0 loot kubejs:minecraft/chests/ancient_city
+  /loot spawn ~ ~1 ~ loot minecraft:chests/ancient_city
   ```
 - If something looks wrong, hit **Revert Changes** back in the app and start over.
 
 ### 5. Logs and backups
 - Every major action writes to `%USERPROFILE%\.loot-editor-b\logs\loot-editor-<timestamp>.log`.
-- The app never touches your existing backups. Use the repo’s `backups/loot-editor-b-<timestamp>` folders (created via `robocopy`) to roll back the entire project if needed.
+- The app never touches your existing backups. Create backups manually if needed before major edits.
 
 ---
 
 ## Building & Running (advanced)
+
+### Development Commands
 1. `./gradlew run` – launch the JavaFX UI.
 2. `./gradlew build` – produce a runnable JAR under `build/libs/`.
 3. `./gradlew test` – run unit tests (covers JSON rebuilds, scanner logic, etc.).
 4. Supply a pack path directly:
    ```
-   ./gradlew run -Dlauncher="C:/Users/<you>/curseforge/minecraft/Instances/DBB2 Dev"
+   ./gradlew run -Dlauncher="C:/Users/<you>/curseforge/minecraft/Instances/YourPack"
    ```
 
-### Redistributable runtime image (Option 3)
-Need to hand the tool to someone who does not have JavaFX set up? Use the bundled Badass Runtime Plugin flow:
+### Creating Standalone Distribution
 
-1. `./gradlew runtime` builds a trimmed Java 17 runtime plus the application under `build/image/`. The generated `bin/loot-editor-b(.bat)` scripts now inject `--module-path "$APP_HOME/lib" --add-modules javafx.controls,javafx.fxml`, so the JavaFX bits bundled in `lib/` are always on the module path.
-2. `./gradlew runtimeZip` zips that folder into `build/image.zip` for fast sharing (drop it on a flash drive or Discord, unzip anywhere, launch `bin/loot-editor-b`).
-3. Windows quality-of-life: double-click `LootEditorB.vbs` (generated next to `bin/`) to launch the batch script hidden. If you do not mind a console window, `bin/loot-editor-b.bat` still works.
-4. Want a native installer later? Install the platform tooling first (e.g., [WiX Toolset](https://wixtoolset.org/) on Windows) and then run `./gradlew jpackage`. Without WiX you can stick to the runtime zip above.
+Need to hand the tool to someone who does not have Java installed? Use the bundled Badass Runtime Plugin:
+
+1. **`./gradlew runtime`** – Builds a trimmed Java 17 runtime plus the application under `build/image/`. The generated `bin/loot-editor-b(.bat)` scripts inject `--module-path "$APP_HOME/lib" --add-modules javafx.controls,javafx.fxml`, so the JavaFX bits bundled in `lib/` are always on the module path.
+
+2. **`./gradlew runtimeZip`** – Zips that folder into `build/image.zip` for fast sharing (~42 MB). Drop it on a flash drive or share via GitHub releases, unzip anywhere, launch `bin/loot-editor-b`.
+
+3. **Windows quality-of-life:** Double-click `LootEditorB.vbs` (generated next to `bin/`) to launch the batch script hidden. If you do not mind a console window, `bin/loot-editor-b.bat` still works.
+
+4. **Want a native installer?** Install the platform tooling first (e.g., [WiX Toolset](https://wixtoolset.org/) on Windows) and then run `./gradlew jpackage`. Without WiX you can stick to the runtime zip above.
 
 ---
 
 ## Headless Manifest / CLI Tools
+
 Need loot coverage without launching the UI? First, in a disposable test world run:
 ```
 /ct dump loottables
@@ -102,7 +171,7 @@ CraftTweaker writes the list to `logs/crafttweaker.log` (older versions also gen
   - `-Pdump=C:/override/lootTables.txt`
   - `-PlogFile=C:/pack/logs/crafttweaker.log` (if the log lives somewhere else)
 
-- **Static scanner (mods/datapacks/KubeJS)**
+- **Static scanner (mods/datapacks)**
   ```
   ./gradlew scanLootTables -PpackRoot="C:/path/to/pack"
   ```
@@ -124,19 +193,39 @@ CraftTweaker writes the list to `logs/crafttweaker.log` (older versions also gen
   ```
   ./gradlew importJarLoot -PpackRoot="C:/path/to/pack" -Ppatterns="chests/,entities/"
   ```
-  Scans every `mods/*.jar` (plus the vanilla jar) for loot tables listed in the merged manifest and copies the ones matching the patterns into `kubejs/data`. Combine with `-Pnamespaces=minecraft,astral_dimension` or `-PdryRun=true` for finer control.
+  Scans every `mods/*.jar` (plus the vanilla jar) for loot tables listed in the merged manifest and copies the ones matching the patterns into `datapacks/loot_editor/data/`. Combine with `-Pnamespaces=minecraft,astral_dimension` or `-PdryRun=true` for finer control.
 
 ### UI integration
-When loot-editor-b launches, it now looks for `import/loot_tables_merged.json` (or any path supplied via the JVM flag `-Dloot.manifest="C:/custom/path.json"`). If the manifest targets the same modpack that is currently open, a toolbar badge shows whether every manifest entry exists in the live scan; missing entries are listed in the tooltip, making it easy to spot CraftTweaker-only tables that still need to be copied into KubeJS/datapacks.
+When loot-editor-b launches, it now looks for `import/loot_tables_merged.json` (or any path supplied via the JVM flag `-Dloot.manifest="C:/custom/path.json"`). If the manifest targets the same modpack that is currently open, a toolbar badge shows whether every manifest entry exists in the live scan; missing entries are listed in the tooltip, making it easy to spot CraftTweaker-only tables that still need to be copied into datapacks.
 
 ---
 
 ## Tips & Troubleshooting
+
 - **Icons missing?** Use **Rescan** after adding mods/resource packs; the app clears its icon cache once the catalog finishes so textures refresh automatically.
+
 - **Enchantment palette empty?** Ensure `/ct dump enchantments` was run in-game and re-open the modpack. The palette reads `ct_dumps/enchantment.txt`.
+
 - **Tables not taking effect in-world?**
-  - Confirm you edited the copy in `kubejs/data` (look for “Editable: true” in Inspector).
-  - Some datapacks override vanilla loot. Check `minecraftinstance.json` and the world’s `datapacks/` folder to see what takes priority.
-  - Make sure you’re testing in a **new** dungeon chest; naturally generated structures keep the loot table that existed when the chunk was created.
+  - Confirm the **loot-editor-loader mod** is installed in your `mods/` folder.
+  - Confirm you edited the copy in `datapacks/loot_editor/` (look for "Editable: true" in Inspector).
+  - Some datapacks override vanilla loot. Check `minecraftinstance.json` and the world's `datapacks/` folder to see what takes priority.
+  - Make sure you're testing in a **new** dungeon chest; naturally generated structures keep the loot table that existed when the chunk was created.
+  - Run `/reload` after saving changes in the app.
+
+- **Minecraft 1.21.1 folder naming:** This version uses singular folder names (`loot_table/` not `loot_tables/`). The application has been updated to use the correct naming convention.
+
+---
+
+## Companion Mod
+
+**loot-editor-loader** is a NeoForge mod that loads the datapack automatically. Without it, loot tables won't take effect in-game.
+
+- **Repository:** [BadgerSnacks/loot-editor-loader](https://github.com/BadgerSnacks/loot-editor-loader)
+- **Minecraft Version:** 1.21.1
+- **NeoForge Version:** 21.1.x
+- **Java Version:** 21
+
+---
 
 Happy editing!
