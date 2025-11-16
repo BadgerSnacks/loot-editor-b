@@ -1,3 +1,7 @@
+# Note from developer
+
+This project was created entirely using Chat-GPT's Codex and Claude Code. I know there is a lot of contriversy surrounding AI right now but the purpose of the this project is a proof of concept that even with no coding experiance we can create wonderful things. If you have issues with the use of AI I suggest you not participate in this project. Even if this project stands a baseboard for something better then it was well worth the time.
+
 # Loot Editor B
 
 Loot Editor B is a desktop utility (Java 17 + JavaFX) that understands an entire Minecraft modpack: it scans vanilla loot, datapacks, and every mod jar, then makes the results editable through a point-and-click UI. You do **not** need modding experience—if you can point the app at your CurseForge instance, you can inspect and tweak loot tables.
