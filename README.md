@@ -23,25 +23,37 @@ No Java installation required! The standalone version includes everything you ne
 ## Prerequisites
 
 ### For the Standalone Version
-- **loot-editor-loader mod** (NeoForge mod for Minecraft 1.21.1)
+- **loot-editor-loader mod** (NeoForge mod for Minecraft 1.21.1) - **Recommended**
   - Download from [loot-editor-loader releases](https://github.com/BadgerSnacks/loot-editor-loader)
   - Place in your modpack's `mods/` folder
+- **OR KubeJS mod** (experimental, untested alternative)
+  - Only if you prefer KubeJS over the dedicated loader mod
 
 ### For Building from Source
 - [JDK 17+](https://adoptium.net/)
 - [Gradle 8.5+](https://gradle.org/) (or use the included wrapper)
-- **loot-editor-loader mod** (same as above)
+- **loot-editor-loader mod** or **KubeJS mod** (see above)
 
 ---
 
 ## Quick Start (for newcomers)
 
-### 1. Install the loot-editor-loader mod
-The **loot-editor-loader** mod is a NeoForge mod that automatically loads loot table datapacks from the application. Without this mod, your edits won't appear in-game.
+### 1. Install a loader mod
+
+**Option A: loot-editor-loader (Recommended)**
+
+The **loot-editor-loader** mod is a NeoForge mod that automatically loads loot table datapacks from the application. Without a loader mod, your edits won't appear in-game.
 
 1. Download **loot-editor-loader** for Minecraft 1.21.1 / NeoForge 21.1.x
 2. Place the `.jar` file in your modpack's `mods/` folder
 3. The mod will automatically register the `loot_editor` datapack location
+
+**Option B: KubeJS (Experimental, Untested)**
+
+Alternatively, you can use KubeJS to load loot tables (not tested with Minecraft 1.21.1):
+1. Install KubeJS mod in your modpack
+2. Configure to load from `kubejs/data/` folder
+3. Use "Fork to KubeJS" in the application instead of "Fork to Datapack"
 
 ### 2. Launch the app
 
@@ -68,11 +80,19 @@ CraftTweaker writes the dump files that Loot Editor uses for manifest comparison
 ### 5. Let the scan finish
 The status bar will read `Loot tables: ### | Items: ###` once both the loot tree and icon catalog are ready. Icons may appear grey for a second while textures load; they refresh automatically when the catalog completes.
 
-That's it—you can now browse loot tables, edit them, attach enchantment pools, and save changes into the `datapacks/loot_editor/` folder.
+That's it—you can now browse loot tables, edit them, attach enchantment pools, and save changes into:
+- `datapacks/loot_editor/` (when using loot-editor-loader mod)
+- `kubejs/data/` (when using KubeJS export)
 
 ---
 
-## How the loot-editor-loader Mod Works
+## Export Methods
+
+Loot Editor B supports two methods for exporting loot tables to Minecraft:
+
+### Method 1: loot-editor-loader Mod (Recommended)
+
+**Status:** ✅ Tested and working with Minecraft 1.21.1
 
 The **loot-editor-loader** mod uses NeoForge's datapack system to automatically load loot tables from:
 - `<modpack>/datapacks/loot_editor/` (main export location)
@@ -87,6 +107,22 @@ The **loot-editor-loader** mod uses NeoForge's datapack system to automatically 
 
 **Config location:** `<modpack>/config/loot-editor-loader-config.toml`
 
+### Method 2: KubeJS (Experimental)
+
+**Status:** ⚠️ Not tested with Minecraft 1.21.1
+
+The application can export loot tables to KubeJS's data folder structure:
+- `<modpack>/kubejs/data/<namespace>/loot_table/<path>.json`
+
+**Notes:**
+- This method has not been tested with the current version
+- KubeJS may have different compatibility requirements
+- Use at your own risk - the loot-editor-loader method is recommended
+
+To use KubeJS export, you would need:
+- KubeJS mod installed in your modpack
+- KubeJS configured to load data from `kubejs/data/` folder
+
 ---
 
 ## Everyday Workflow
@@ -94,7 +130,7 @@ The **loot-editor-loader** mod uses NeoForge's datapack system to automatically 
 ### 1. Browse and open loot tables
 - Use the left-hand tree to filter by **All / Chests / Blocks / Entities**.
 - Double-click any leaf node (e.g., `minecraft/chests/ancient_city`) to load it into the editor pane.
-- The **Inspector** tab shows the path on disk plus whether the table is editable. If it lives inside a mod jar, hit **Fork to Datapack** to copy it into `datapacks/loot_editor/` before editing.
+- The **Inspector** tab shows the path on disk plus whether the table is editable. If it lives inside a mod jar, use **Fork to Datapack** or **Fork to KubeJS** to copy it to an editable location before editing.
 
 ### 2. Edit drops in the Loot Entries list
 - There is a single list labeled **Loot Entries**. Each row displays the item icon, friendly name, weight, and min/max count.
@@ -114,8 +150,10 @@ The **loot-editor-loader** mod uses NeoForge's datapack system to automatically 
 - Switching between pools now warns you if the current form has unsaved edits, so save or discard before hopping to another pool. When a pool is dirty, a yellow banner appears with **Save Now** and **Discard Changes** buttons for quick control.
 
 ### 4. Save & test
-- Click **Save Loot Table**. The app writes JSON to `datapacks/loot_editor/data/<namespace>/loot_table/<path>.json`.
-- Each time you save/export, Loot Editor also mirrors that datapack into every world under `saves/<world>/datapacks/` so it is immediately enabled in-game (a datapack only loads when it sits in the world's datapacks folder).
+- Click **Save Loot Table**. The app writes JSON to:
+  - **Datapack export:** `datapacks/loot_editor/data/<namespace>/loot_table/<path>.json` (recommended)
+  - **KubeJS export:** `kubejs/data/<namespace>/loot_table/<path>.json` (experimental, untested)
+- When using datapack export, Loot Editor also mirrors that datapack into every world under `saves/<world>/datapacks/` so it is immediately enabled in-game (a datapack only loads when it sits in the world's datapacks folder).
 - Close the window only after saving. Loot Editor now warns if you try to exit while loot tables or enchantment pools still have unsaved edits.
 - Load your dev world and run `/reload` to pull in the changes.
 - Use `/loot spawn <x> <y> <z> loot <table_id>` to test exactly what was edited. Example:
@@ -193,7 +231,7 @@ CraftTweaker writes the list to `logs/crafttweaker.log` (older versions also gen
   ```
   ./gradlew importJarLoot -PpackRoot="C:/path/to/pack" -Ppatterns="chests/,entities/"
   ```
-  Scans every `mods/*.jar` (plus the vanilla jar) for loot tables listed in the merged manifest and copies the ones matching the patterns into `datapacks/loot_editor/data/`. Combine with `-Pnamespaces=minecraft,astral_dimension` or `-PdryRun=true` for finer control.
+  Scans every `mods/*.jar` (plus the vanilla jar) for loot tables listed in the merged manifest and copies the ones matching the patterns into `datapacks/loot_editor/data/` (or `kubejs/data/` if using KubeJS export). Combine with `-Pnamespaces=minecraft,astral_dimension` or `-PdryRun=true` for finer control.
 
 ### UI integration
 When loot-editor-b launches, it now looks for `import/loot_tables_merged.json` (or any path supplied via the JVM flag `-Dloot.manifest="C:/custom/path.json"`). If the manifest targets the same modpack that is currently open, a toolbar badge shows whether every manifest entry exists in the live scan; missing entries are listed in the tooltip, making it easy to spot CraftTweaker-only tables that still need to be copied into datapacks.
@@ -207,8 +245,14 @@ When loot-editor-b launches, it now looks for `import/loot_tables_merged.json` (
 - **Enchantment palette empty?** Ensure `/ct dump enchantments` was run in-game and re-open the modpack. The palette reads `ct_dumps/enchantment.txt`.
 
 - **Tables not taking effect in-world?**
-  - Confirm the **loot-editor-loader mod** is installed in your `mods/` folder.
-  - Confirm you edited the copy in `datapacks/loot_editor/` (look for "Editable: true" in Inspector).
+  - **Using datapack export (recommended):**
+    - Confirm the **loot-editor-loader mod** is installed in your `mods/` folder.
+    - Confirm you edited the copy in `datapacks/loot_editor/` (look for "Editable: true" in Inspector).
+    - Check that the world's `datapacks/` folder contains the `loot_editor` datapack.
+  - **Using KubeJS export (experimental):**
+    - Confirm KubeJS mod is installed and configured correctly.
+    - Check that tables are in `kubejs/data/<namespace>/loot_table/<path>.json`.
+    - Note: This method has not been tested with Minecraft 1.21.1.
   - Some datapacks override vanilla loot. Check `minecraftinstance.json` and the world's `datapacks/` folder to see what takes priority.
   - Make sure you're testing in a **new** dungeon chest; naturally generated structures keep the loot table that existed when the chunk was created.
   - Run `/reload` after saving changes in the app.
