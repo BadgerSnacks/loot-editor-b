@@ -1,0 +1,41 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+*.code-workspace
+.DS_Store
+
+# Runtime data and user-specific files
+import/
+export/
+export-settings.json
+
+# Logs
+*.log
+logs/
+importlog.txt
+
+# OS
+Thumbs.db
+.DS_Store
+
+# JRE/JDK
+*.class
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~
+.#*

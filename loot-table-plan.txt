@@ -1,0 +1,87 @@
+CraftTweaker + Static Jar Scan Plan (updated 2025-11-08 16:45)
+=======================================================================
+
+Goal: ensure loot-editor-b sees every loot table registered by the pack, even when KubeJS scripts miss them. We combine runtime CraftTweaker dumps with a static scan of mod/datapack jars so we always have a complete manifest to drive the editor.
+
+1. CraftTweaker Workflow
+------------------------
+- Prereq: CraftTweaker mod present in the dev instance. Restart the client once so `/ct dump loottables` works.
+- In a disposable test world (e.g., saves/Testing), run `/ct dump loottables`. CraftTweaker writes:
+  * `logs/crafttweaker.log` - contains the freshly dumped IDs (older versions also write `ct_dumps/lootTables.txt`).
+- If the dump lives elsewhere, capture the path (for the `-Pdump`/`-PlogFile` overrides below).
+- Run `./gradlew importCraftTweakerDump -PpackRoot="C:/path/to/pack"` to convert that dump into `import/loot_tables_ct.json`. Extra flags:
+  * `-PctManifest=...` (or legacy `-Poutput=...`) to control the output location.
+  * `-Pdump=...` and `-PlogFile=...` to point at alternate inputs.
+- The JSON records `{ "source": "crafttweaker", "generated": "...", "tables": [ "namespace:path", ... ] }` and drives downstream comparisons.
+
+2. Static Jar Scan Workflow
+---------------------------
+- Motivation: catches tables CraftTweaker missed (e.g., command not re-run, headless review, startup-only datapacks).
+- Run `./gradlew scanLootTables -PpackRoot="C:/path/to/pack"` to execute the Java-based scanner (shares the same ModpackScanner used in the UI).
+- The task walks KubeJS data, datapacks (folder + zips), world datapacks, mods/*.jar, and the vanilla jar, then emits `import/loot_tables_scan.json` (override via `-PscanManifest=...` or `-Poutput=...`).
+- Each entry includes `{ "id": "namespace:path", "sourceType": "...", "containerPath": "...", "archiveEntry": "...", "editable": bool }` so downstream tools know which files are writable.
+
+3. Merged Manifest and Editor Integration
+-----------------------------------------
+- `./gradlew mergeLootManifests` takes the CraftTweaker + jar scan manifests (override paths with `-PctManifest=...`, `-PscanManifest=...`, `-PmergedManifest=...`) and writes `import/loot_tables_merged.json`. Metadata includes `packRoot` so we can detect mismatched packs later.
+- `./gradlew refreshLootIndex -PpackRoot="..."` chains all three steps (import → scan → merge) with sane defaults, so “refresh manifest” becomes a one-liner.
+- `./gradlew importJarLoot -PpackRoot="..." -Ppatterns="chests/,entities/" [-Pnamespaces=...]` scans every `mods/*.jar` plus the vanilla jar, finds matching tables (as listed in the merged manifest), and copies them straight into `kubejs/data`. Add `-PdryRun=true` to preview.
+- Merged schema:
+
+~~~json
+{
+  "generated": "ISO8601",
+  "sources": {
+    "crafttweaker": "...",
+    "jar_scan": "..."
+  },
+  "tables": [
+    {
+      "id": "mod:foo",
+      "presentIn": ["crafttweaker", "jar_scan"],
+      "details": { }
+    }
+  ]
+}
+~~~
+
+- loot-editor-b now loads the merged manifest (default `import/loot_tables_merged.json`, override via `-Dloot.manifest="C:/path.json"`). When a pack is scanned, the toolbar shows a “Manifest” badge:
+  * `Manifest: synced` – every manifest entry exists in the live scan.
+  * `Manifest missing: N` – CraftTweaker-only IDs still need to land in datapacks/KubeJS. The tooltip lists the first 20 missing IDs for quick triage.
+
+4. Validation and Maintenance
+-----------------------------
+- After any mod update or loot-related change, rerun `/ct dump loottables` in a clean world before refreshing the manifest to avoid stale caches.
+- Log each run in command_history.txt with world name plus timestamp plus command string for provenance.
+- `mergeLootManifests` already surfaces coverage deltas via the UI badge, but we can still add a future diff/CI step to prevent regressions before committing.
+- Long term: wire the Gradle tasks into CI (outside this exported instance) so PRs that add/update mods automatically refresh and attach the manifest artifacts.
+
+Use this file as the authoritative reference next time we revisit loot-editor-b. Update timestamps whenever the workflow changes.
+
+5. Upcoming Enhancements
+------------------------
+- **Recent Modpack Memory**
+  * UX: Add a drop-down chevron next to **Open Modpack** that lists the five most recently opened pack roots (with timestamps). Selecting an entry should immediately trigger `scanModpack(...)` without reopening the directory chooser.
+  * Persistence: Store MRU entries in `%USERPROFILE%/.loot-editor-b/packs.json` so the list survives restarts but stays user-local (mirrors how `ActionLogger` writes to `.loot-editor-b/logs/`).
+  * Telemetry: Extend the action logger to emit `ui:openModpackCached` vs `ui:openModpackBrowse` so we can tell whether the MRU menu is getting used.
+- **Weighted Enchantment Pools**
+  * Research reference: The Minecraft loot-table spec (see <https://minecraft.fandom.com/wiki/Loot_table#Item_function>) exposes `set_enchantments`, `enchant_with_levels`, and `enchant_randomly` functions—these are the supported hooks for applying enchantments during loot generation.
+  * Data Model: Define a first-class `EnchantmentPool` record (`id`, allowed enchantments, weight, level range). Pools live alongside loot tables (e.g., `kubejs/data/<namespace>/enchantment_pools/<pool>.json`) so they can be versioned like everything else.
+  * UI: Add an “Enchantment Pools” palette tab where designers can (a) create/edit pools, (b) assign weights per enchantment, and (c) drag a pool onto an item entry. The editor should translate that association into an item modifier that calls `minecraft:set_enchantments` with the configured weights or emits a helper function for `enchant_with_levels`.
+  * Serialization: When saving a loot table entry with an attached pool, inject the corresponding loot function into the JSON (`functions: [{ "function": "minecraft:set_enchantments", "enchantments": [...] }]`). For level-based pools, serialize `minecraft:enchant_with_levels` plus `treasure: true/false`, min/max levels, and any custom random distribution.
+  * Validation: Surface warnings in the Inspector if a pool refers to enchantments invalid for the selected item (e.g., using `minecraft:multishot` on a sword). Cross-check against the official compatibility matrix before saving.
+- **Custom Table Cleanup**
+  * Feature: Provide a “Remove from manifest” or “Hide custom tables” action that deletes (or archives) KubeJS/datapack loot tables the user created through the editor, so the list stays focused on the targets we still need to tune.
+  * UX: Offer the action from the Inspector (for individual tables) plus a bulk-selection affordance in the tree. The default behavior should move the file into a recycle/bin folder (or prompt before permanent delete) to avoid accidental data loss.
+  * Manifest Awareness: When a table is removed, automatically prune its entry from `loot_tables_merged.json` (or mark it inactive) so subsequent scans do not resurrect it.
+- **Entry Pane Consolidation**
+  * Observation: The editor currently shows “Available Entries” (KubeJS render of the live JSON) and “Selected Entries” (pending edits) as two separate lists even though they represent the same pool of drops.
+  * Goal: Reconcile both panes into a single editable grid that displays each entry once, exposing weight/count controls inline while still differentiating unsaved edits (badge or icon) from persisted data.
+  * Implementation Idea: Treat the grid as the canonical view, add a change-summary panel for people who liked the two-pane diff, and keep the undo/redo stack so designers can back out quickly.
+// TODO: Investigate duplicate IDs that appear once as `minecraft:chest` and once as `minecraft:block` so we understand whether this is intentional (e.g., block drop tables) before hiding them.
+// TODO: KubeJS/minecraft/chests/ancient_city edits appear to be overridden in-game—research datapack load order and identify which pack is replacing this table before making further adjustments.
+// DONE: New tables created via the in-app “New Loot Table” flow now go into the managed datapack and auto-sync to world saves, so they load in-game after /reload. Cleanup action remains future work.
+// TODO: Build a standalone “Loot Editor Helper” mod that runs inside Minecraft to dump loot tables + enchantments (replacing the CraftTweaker dependency). Target feature parity with /ct dump loottables and /ct dump enchantments, emitting JSON/flat files Loot Editor can import directly.
+// TODO: Profile memory usage—current runtime footprint exceeds 1 GB; reduce heap pressure (icon cache, manifest ingest, FX scene graph) and set sane default JVM flags before distributing.
+// DONE: Prompt on exit when loot tables or enchantment pools have unsaved edits so users do not lose work by closing the app accidentally.
+// TODO: Detect modpacks missing KubeJS; warn the user and support editing via vanilla/datapack paths so non-KubeJS packs still work.

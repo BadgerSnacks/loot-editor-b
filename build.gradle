@@ -1,0 +1,200 @@
+import org.gradle.jvm.application.tasks.CreateStartScripts
+
+plugins {
+    id 'application'
+    id 'org.openjfx.javafxplugin' version '0.1.0'
+    id 'org.beryx.runtime' version '1.13.1'
+}
+
+group = 'dev.badgersnacks'
+version = '0.1.0'
+
+def javaVersion = 17
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(javaVersion)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+javafx {
+    version = '20.0.1'
+    modules = ['javafx.base', 'javafx.graphics', 'javafx.controls', 'javafx.fxml']
+}
+
+dependencies {
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.17.1'
+    implementation 'com.fasterxml.jackson.core:jackson-annotations:2.17.1'
+    implementation 'com.fasterxml.jackson.core:jackson-core:2.17.1'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.17.1'
+    implementation 'org.slf4j:slf4j-api:2.0.12'
+    runtimeOnly 'org.slf4j:slf4j-simple:2.0.12'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.1'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.1'
+}
+
+application {
+    mainClass = 'dev.badgersnacks.looteditor.LootEditorApp'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+}
+
+runtime {
+    options = ['--strip-debug', '--compress', '2', '--no-header-files', '--no-man-pages']
+    modules = ['java.se', 'jdk.unsupported', 'jdk.zipfs']
+}
+
+tasks.withType(CreateStartScripts).configureEach {
+    doLast {
+        unixScript.text = unixScript.text.replace(
+                'DEFAULT_JVM_OPTS=""',
+                'DEFAULT_JVM_OPTS="--module-path \"$APP_HOME/lib\" --add-modules javafx.controls,javafx.fxml -Dapp.home=\"$APP_HOME\""' 
+        )
+        windowsScript.text = windowsScript.text.replace(
+                'set DEFAULT_JVM_OPTS=',
+                'set DEFAULT_JVM_OPTS="--module-path" "%APP_HOME%\\lib" "--add-modules" "javafx.controls,javafx.fxml" "-Dapp.home=%APP_HOME%"'
+        )
+    }
+}
+
+tasks.named('installDist').configure {
+    doLast {
+        def importSource = new File(project.projectDir, 'import')
+        if (importSource.exists()) {
+            project.copy {
+                from importSource
+                into new File(destinationDir, 'import')
+            }
+        }
+        def jrtFs = new File(destinationDir, 'lib/jrt-fs.jar')
+        if (jrtFs.exists()) {
+            jrtFs.delete()
+        }
+    }
+}
+
+tasks.named('runtime').configure {
+    doLast {
+        def importSource = new File(project.projectDir, 'import')
+        if (importSource.exists()) {
+            project.copy {
+                from importSource
+                into new File(buildDir, 'image/import')
+            }
+        }
+        def jrtFs = new File(buildDir, 'image/lib/jrt-fs.jar')
+        if (jrtFs.exists()) {
+            jrtFs.delete()
+        }
+        def vbs = new File(buildDir, 'image/LootEditorB.vbs')
+        vbs.text = 'Set shell = CreateObject("Wscript.Shell")\r\nshell.Run """bin\\loot-editor-b.bat""", 0, False\r\n'
+    }
+}
+
+def defaultOutput(String fileName) {
+    return "${project.projectDir}/import/${fileName}"
+}
+
+def resolvePath(String propertyName, String defaultFileName, boolean allowOutputFallback = false) {
+    if (project.hasProperty(propertyName)) {
+        return project.property(propertyName)
+    }
+    if (allowOutputFallback && project.hasProperty('output')) {
+        return project.property('output')
+    }
+    return defaultOutput(defaultFileName)
+}
+
+tasks.register('importCraftTweakerDump', JavaExec) {
+    group = 'loot-tools'
+    description = 'Convert CraftTweaker ct_dumps/lootTables.txt into a JSON manifest.'
+    mainClass = 'dev.badgersnacks.looteditor.tools.CraftTweakerDumpImporter'
+    classpath = sourceSets.main.runtimeClasspath
+    dependsOn 'classes'
+    doFirst {
+        if (!project.hasProperty('packRoot')) {
+            throw new GradleException("importCraftTweakerDump requires -PpackRoot=<path to modpack root>")
+        }
+        def outputPath = resolvePath('ctManifest', 'loot_tables_ct.json', true)
+        setArgs(new ArrayList<>(List.of(project.property('packRoot'), outputPath)))
+        if (project.hasProperty('dump')) {
+            args '--dump', project.property('dump')
+        }
+        if (project.hasProperty('logFile')) {
+            args '--log', project.property('logFile')
+        }
+    }
+}
+
+tasks.register('scanLootTables', JavaExec) {
+    group = 'loot-tools'
+    description = 'Scan the modpack and dump every loot table descriptor into JSON.'
+    mainClass = 'dev.badgersnacks.looteditor.tools.LootTableScanCli'
+    classpath = sourceSets.main.runtimeClasspath
+    dependsOn 'classes'
+    doFirst {
+        if (!project.hasProperty('packRoot')) {
+            throw new GradleException("scanLootTables requires -PpackRoot=<path to modpack root>")
+        }
+        def outputPath = resolvePath('scanManifest', 'loot_tables_scan.json', true)
+        setArgs(new ArrayList<>(List.of(project.property('packRoot'), outputPath)))
+    }
+}
+
+tasks.register('mergeLootManifests', JavaExec) {
+    group = 'loot-tools'
+    description = 'Merge CraftTweaker + jar scan manifests into a single file.'
+    mainClass = 'dev.badgersnacks.looteditor.tools.LootManifestMerger'
+    classpath = sourceSets.main.runtimeClasspath
+    dependsOn 'classes'
+    mustRunAfter 'importCraftTweakerDump', 'scanLootTables'
+    doFirst {
+        def ctManifest = resolvePath('ctManifest', 'loot_tables_ct.json')
+        def scanManifest = resolvePath('scanManifest', 'loot_tables_scan.json')
+        def mergedManifest = resolvePath('mergedManifest', 'loot_tables_merged.json')
+        setArgs(new ArrayList<>(List.of(ctManifest, scanManifest, mergedManifest)))
+    }
+}
+
+tasks.register('refreshLootIndex') {
+    group = 'loot-tools'
+    description = 'Run CraftTweaker import + jar scan + merged manifest in one go.'
+    dependsOn 'importCraftTweakerDump', 'scanLootTables', 'mergeLootManifests'
+}
+
+tasks.register('importJarLoot', JavaExec) {
+    group = 'loot-tools'
+    description = 'Copy loot tables directly from mod/vanilla jars into kubejs/data based on the merged manifest.'
+    mainClass = 'dev.badgersnacks.looteditor.tools.ManifestLootImporter'
+    classpath = sourceSets.main.runtimeClasspath
+    dependsOn 'classes'
+    doFirst {
+        if (!project.hasProperty('packRoot')) {
+            throw new GradleException("importJarLoot requires -PpackRoot=<path to modpack root>")
+        }
+        def argsList = new ArrayList<>(List.of(project.property('packRoot')))
+        if (project.hasProperty('manifest')) {
+            argsList.add("--manifest=" + project.property('manifest'))
+        }
+        if (project.hasProperty('patterns')) {
+            argsList.add("--patterns=" + project.property('patterns'))
+        }
+        if (project.hasProperty('namespaces')) {
+            argsList.add("--namespaces=" + project.property('namespaces'))
+        }
+        if (project.hasProperty('dryRun') && project.property('dryRun').toString().toBoolean()) {
+            argsList.add("--dry-run")
+        }
+        setArgs(argsList)
+    }
+}

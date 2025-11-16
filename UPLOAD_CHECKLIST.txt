@@ -1,0 +1,88 @@
+╔════════════════════════════════════════════════════════════════╗
+║        GITHUB UPLOAD CHECKLIST - LOOT EDITOR B                 ║
+╚════════════════════════════════════════════════════════════════╝
+
+✅ UPLOAD THESE FILES (Total: ~1 MB)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📁 Source Code (46 Java files)
+   src/main/java/dev/badgersnacks/looteditor/
+   └── All .java files in all subdirectories
+
+📁 Build System
+   build.gradle               - Build configuration
+   settings.gradle            - Gradle settings  
+   gradlew                    - Gradle wrapper (Unix)
+   gradlew.bat                - Gradle wrapper (Windows)
+   gradle/wrapper/            - Gradle wrapper files
+
+📄 Documentation
+   README.md                  - Project documentation
+   loot-table-plan.txt        - Design documentation
+   debug.png                  - Screenshot/asset
+   .gitignore                 - Git ignore rules
+   GITHUB_UPLOAD_GUIDE.md     - This guide
+   UPLOAD_CHECKLIST.txt       - This checklist
+   FIXES_APPLIED.md           - Fix documentation
+
+❌ DO NOT UPLOAD (Excluded by .gitignore)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📁 Build Artifacts (~265 MB) ❌
+   build/                     - Compiled output
+   .gradle/                   - Gradle cache
+
+📁 Runtime Data (~23 MB) ❌
+   import/                    - Scanned loot tables
+   export/                    - Exported datapacks
+   
+📄 User Files ❌
+   export-settings.json       - Local path config
+   importlog.txt              - Runtime log
+   *.log                      - Log files
+
+📁 IDE Files ❌
+   .idea/                     - IntelliJ IDEA
+   .vscode/                   - VS Code
+   *.iml                      - IntelliJ modules
+
+═══════════════════════════════════════════════════════════════
+
+QUICK START COMMANDS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Initialize Git:
+   cd "C:\Users\BadgerSnacks\curseforge\minecraft\Instances\Mod Testing\loot-editor-b"
+   git init
+
+2. Add all files (respects .gitignore):
+   git add .
+   git status
+
+3. Commit:
+   git commit -m "Initial commit with Minecraft 1.21.1 fixes"
+
+4. Create repository on GitHub:
+   https://github.com/new
+
+5. Push:
+   git remote add origin https://github.com/YOUR-USERNAME/loot-editor-b.git
+   git branch -M main
+   git push -u origin main
+
+═══════════════════════════════════════════════════════════════
+
+VERIFICATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Before pushing, verify with:
+   git status --ignored
+
+Should show:
+   ✅ Untracked: src/, gradle/, *.gradle, README.md
+   ❌ Ignored: build/, .gradle/, import/, export/
+
+═══════════════════════════════════════════════════════════════
+
+Repository Size: ~1 MB (vs 289 MB without .gitignore!)
+
